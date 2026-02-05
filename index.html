@@ -491,6 +491,9 @@
 
     .login-form-wrap .btn-primary { width: 100%; margin-top: 0.5rem; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-db.js"></script>
 </head>
 <body>
   <header class="page-header">
@@ -604,92 +607,45 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'reading66';
-    const CONFIG_KEY = 'reading66_config';
-    const USERS_KEY = 'reading66_users';
-    const DATA_KEY = 'reading66_data';
-    const CURRENT_USER_KEY = 'reading66_currentUser';
     const USER_LOGIN_KEY = 'reading66_user_logged';
-    const NOTICES_KEY = 'reading66_notices';
-
-    function getConfig() {
-      try {
-        const raw = localStorage.getItem(CONFIG_KEY);
-        if (raw) return JSON.parse(raw);
-      } catch (e) {}
-      return { startDate: getTodayKey(), totalDays: 66, goalPages: 20 };
-    }
 
     function getTodayKey() {
       const d = new Date();
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
-    function getUsers() {
-      try {
-        const raw = localStorage.getItem(USERS_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) { return []; }
-    }
-
     function getCurrentUserId() {
-      const users = getUsers();
-      if (users.length === 0) return null;
-      const logged = sessionStorage.getItem(USER_LOGIN_KEY);
-      if (logged && users.some(u => u.id === logged)) return logged;
-      return null;
+      var stored = sessionStorage.getItem(USER_LOGIN_KEY) || null;
+      if (window.db && window.db.useSupabase && window.db.useSupabase() && stored) {
+        var uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRe.test(stored)) {
+          sessionStorage.removeItem(USER_LOGIN_KEY);
+          return null;
+        }
+      }
+      return stored;
     }
 
     function isUserLoggedIn() {
       return getCurrentUserId() !== null;
     }
 
-    function getNotices() {
-      try {
-        const raw = localStorage.getItem(NOTICES_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) { return []; }
-    }
+    async function getConfig() { return window.db.getConfig(); }
+    async function getUsers() { return window.db.getUsers(); }
+    async function getNotices() { return window.db.getNotices(); }
 
-    function loadData() {
-      const config = getConfig();
+    async function loadData() {
+      const config = await getConfig();
       const totalDays = config.totalDays || 66;
       const goalPages = config.goalPages || 20;
       const userId = getCurrentUserId();
-
+      let data;
       if (userId) {
-        try {
-          const raw = localStorage.getItem(DATA_KEY);
-          const all = raw ? JSON.parse(raw) : {};
-          const data = all[userId] || { daily: {} };
-          return { data, totalDays, goalPages };
-        } catch (e) {
-          return { data: { daily: {} }, totalDays, goalPages };
-        }
-      }
-
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const data = raw ? JSON.parse(raw) : { daily: {} };
-        return { data, totalDays, goalPages };
-      } catch (e) {
-        return { data: { daily: {} }, totalDays, goalPages };
-      }
-    }
-
-    function saveData(data) {
-      const userId = getCurrentUserId();
-      if (userId) {
-        let all = {};
-        try {
-          const raw = localStorage.getItem(DATA_KEY);
-          if (raw) all = JSON.parse(raw);
-        } catch (e) {}
-        all[userId] = data;
-        localStorage.setItem(DATA_KEY, JSON.stringify(all));
+        data = await window.db.getReadingData(userId);
       } else {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        data = await window.db.getSingleUserReadingData();
       }
+      return { data, totalDays, goalPages };
     }
 
     function formatDateKey(key) {
@@ -709,11 +665,11 @@
       };
     }
 
-    function render() {
-      const config = getConfig();
+    async function render() {
+      const config = await getConfig();
       const totalDays = config.totalDays || 66;
       const goalPages = config.goalPages || 20;
-      const users = getUsers();
+      const users = await getUsers();
       const userId = getCurrentUserId();
 
       if (users.length > 0 && userId) {
@@ -727,7 +683,7 @@
         document.getElementById('myInfoName').textContent = '나';
       }
 
-      const { data } = loadData();
+      const { data } = await loadData();
       const todayKey = getTodayKey();
       const daily = data.daily || {};
       const startDateObj = config.startDate ? new Date(config.startDate + 'T00:00:00') : null;
@@ -855,7 +811,7 @@
         dotsEl.appendChild(span);
       });
 
-      var notices = getNotices();
+      var notices = await getNotices();
       var noticeList = document.getElementById('noticeList');
       var noticeEmpty = document.getElementById('noticeEmpty');
       noticeList.innerHTML = '';
@@ -873,10 +829,12 @@
           noticeList.appendChild(li);
         });
       }
+      window._lastDaily = daily;
+      window._lastConfig = config;
     }
 
-    function showLoginForm() {
-      var users = getUsers();
+    async function showLoginForm() {
+      var users = await getUsers();
       document.getElementById('loginId').value = '';
       document.getElementById('loginPassword').value = '';
       var hint = document.getElementById('loginHint');
@@ -898,19 +856,19 @@
       document.getElementById('headerLogoutWrap').classList.remove('hidden');
     }
 
-    function updateView() {
+    async function updateView() {
       if (!getCurrentUserId()) {
-        showLoginForm();
+        await showLoginForm();
       } else {
         showMainContent();
-        render();
+        await render();
       }
     }
 
-    document.getElementById('btnLogin').addEventListener('click', function () {
+    document.getElementById('btnLogin').addEventListener('click', async function () {
       var id = (document.getElementById('loginId').value || '').trim();
       var password = (document.getElementById('loginPassword').value || '').trim();
-      var users = getUsers();
+      var users = await getUsers();
       if (users.length === 0) {
         alert('등록된 참가자가 없습니다.');
         return;
@@ -927,7 +885,7 @@
       }
       sessionStorage.setItem(USER_LOGIN_KEY, user.id);
       showMainContent();
-      render();
+      await render();
     });
 
     document.getElementById('loginId').addEventListener('keydown', function (e) {
@@ -946,13 +904,12 @@
     document.getElementById('recordDate').addEventListener('change', function () {
       var dateKey = this.value;
       if (!dateKey) return;
-      var data = loadData().data;
-      var daily = data.daily || {};
+      var daily = window._lastDaily || {};
       var entry = getDayEntry(daily, dateKey);
       document.getElementById('todayPages').value = entry.pages > 0 ? entry.pages : '';
       document.getElementById('todayBookTitle').value = entry.bookTitle || '';
       document.getElementById('todayThought').value = entry.thought || '';
-      var goalPages = (getConfig().goalPages || 20);
+      var goalPages = (window._lastConfig && window._lastConfig.goalPages) || 20;
       var pct = Math.min(100, Math.round((entry.pages / goalPages) * 100));
       var todayBar = document.getElementById('todayBar');
       todayBar.style.width = pct + '%';
@@ -971,7 +928,7 @@
       }
     });
 
-    document.getElementById('btnSave').addEventListener('click', function () {
+    document.getElementById('btnSave').addEventListener('click', async function () {
       var input = document.getElementById('todayPages');
       var val = parseInt(input.value, 10);
       if (isNaN(val) || val < 0) {
@@ -980,39 +937,39 @@
       }
       var dateKey = (document.getElementById('recordDate').value || '').trim();
       if (!dateKey || dateKey.length < 10) dateKey = getTodayKey();
-      var data = loadData().data;
-      data.daily = data.daily || {};
-      data.daily[dateKey] = {
+      var userId = getCurrentUserId();
+      var payload = {
         pages: val,
         bookTitle: (document.getElementById('todayBookTitle').value || '').trim(),
         thought: (document.getElementById('todayThought').value || '').trim()
       };
-      saveData(data);
-      render();
+      try {
+        await window.db.saveReadingRecord(userId, dateKey, payload);
+      } catch (err) {
+        alert(err.message || '저장에 실패했습니다.');
+        return;
+      }
+      await render();
     });
 
     document.getElementById('todayPages').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') document.getElementById('btnSave').click();
     });
 
-    document.getElementById('btnReset').addEventListener('click', function () {
+    document.getElementById('btnReset').addEventListener('click', async function () {
       if (!confirm('정말 챌린지를 초기화할까요? 현재 참가자의 모든 기록이 삭제됩니다.')) return;
       var userId = getCurrentUserId();
-      if (userId) {
-        try {
-          var raw = localStorage.getItem(DATA_KEY);
-          var all = raw ? JSON.parse(raw) : {};
-          delete all[userId];
-          localStorage.setItem(DATA_KEY, JSON.stringify(all));
-        } catch (e) {}
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
+      try {
+        await window.db.deleteAllReadingData(userId);
+      } catch (err) {
+        alert(err.message || '초기화에 실패했습니다.');
+        return;
       }
       document.getElementById('recordDate').value = getTodayKey();
       document.getElementById('todayPages').value = '';
       document.getElementById('todayBookTitle').value = '';
       document.getElementById('todayThought').value = '';
-      render();
+      await render();
     });
 
     updateView();

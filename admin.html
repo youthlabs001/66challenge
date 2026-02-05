@@ -294,6 +294,9 @@
       }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-db.js"></script>
 </head>
 <body>
   <div class="container">
@@ -413,52 +416,12 @@
   </div>
 
   <script>
-    const CONFIG_KEY = 'reading66_config';
-    const USERS_KEY = 'reading66_users';
-    const NOTICES_KEY = 'reading66_notices';
-    const DATA_KEY = 'reading66_data';
-    const STORAGE_KEY = 'reading66';
     const ADMIN_PASSWORD_KEY = 'reading66_admin_password';
 
-    function getConfig() {
-      try {
-        const raw = localStorage.getItem(CONFIG_KEY);
-        if (raw) return JSON.parse(raw);
-      } catch (e) {}
-      return {
-        startDate: new Date().toISOString().slice(0, 10),
-        totalDays: 66,
-        goalPages: 20
-      };
-    }
-
-    function saveConfig(config) {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    }
-
-    function getUsers() {
-      try {
-        const raw = localStorage.getItem(USERS_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveUsers(users) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-
-    function getNotices() {
-      try {
-        var raw = localStorage.getItem(NOTICES_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) { return []; }
-    }
-
-    function saveNotices(notices) {
-      localStorage.setItem(NOTICES_KEY, JSON.stringify(notices));
-    }
+    async function getConfig() { return window.db.getConfig(); }
+    async function saveConfig(config) { return window.db.saveConfig(config); }
+    async function getUsers() { return window.db.getUsers(); }
+    async function getNotices() { return window.db.getNotices(); }
 
     function getStoredPassword() {
       return localStorage.getItem(ADMIN_PASSWORD_KEY) || '';
@@ -485,28 +448,24 @@
       return typeof v.pages === 'number' ? v.pages : (parseInt(v.pages, 10) || 0);
     }
 
-    function getAllProgress() {
-      var config = getConfig();
+    async function getAllProgress() {
+      var config = await getConfig();
       var totalDays = config.totalDays || 66;
       var goalPages = config.goalPages || 20;
       var startDate = config.startDate ? new Date(config.startDate + 'T00:00:00') : null;
-      var users = getUsers();
+      var users = await getUsers();
       var result = [];
-      var allData = {};
-      try {
-        var raw = localStorage.getItem(DATA_KEY);
-        if (raw) allData = JSON.parse(raw);
-      } catch (e) {}
       if (users.length > 0) {
-        users.forEach(function (u) {
-          var data = allData[u.id] || { daily: {} };
+        for (var i = 0; i < users.length; i++) {
+          var u = users[i];
+          var data = await window.db.getReadingData(u.id);
           var daily = data.daily || {};
           var certifiedDays = 0;
           var totalPages = 0;
           if (startDate) {
-            for (var i = 0; i < totalDays; i++) {
+            for (var j = 0; j < totalDays; j++) {
               var d = new Date(startDate);
-              d.setDate(d.getDate() + i);
+              d.setDate(d.getDate() + j);
               var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
               var pages = getDayPages(daily, dateKey);
               totalPages += pages;
@@ -521,39 +480,36 @@
           }
           var pct = totalDays > 0 ? Math.min(100, Math.round((certifiedDays / totalDays) * 100)) : 0;
           result.push({ id: u.id, name: u.name, certifiedDays: certifiedDays, totalDays: totalDays, totalPages: totalPages, pct: pct });
-        });
+        }
       } else {
-        try {
-          var singleRaw = localStorage.getItem(STORAGE_KEY);
-          var single = singleRaw ? JSON.parse(singleRaw) : { daily: {} };
-          var daily = single.daily || {};
-          var certifiedDays = 0;
-          var totalPages = 0;
-          if (startDate) {
-            for (var i = 0; i < totalDays; i++) {
-              var d = new Date(startDate);
-              d.setDate(d.getDate() + i);
-              var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-              var pages = getDayPages(daily, dateKey);
-              totalPages += pages;
-              if (pages >= goalPages) certifiedDays++;
-            }
-          } else {
-            Object.keys(daily).forEach(function (k) {
-              var p = getDayPages(daily, k);
-              totalPages += p;
-              if (p >= goalPages) certifiedDays++;
-            });
+        var single = await window.db.getSingleUserReadingData();
+        var daily = single.daily || {};
+        var certifiedDays = 0;
+        var totalPages = 0;
+        if (startDate) {
+          for (var k = 0; k < totalDays; k++) {
+            var d = new Date(startDate);
+            d.setDate(d.getDate() + k);
+            var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            var pages = getDayPages(daily, dateKey);
+            totalPages += pages;
+            if (pages >= goalPages) certifiedDays++;
           }
-          var pct = totalDays > 0 ? Math.min(100, Math.round((certifiedDays / totalDays) * 100)) : 0;
-          result.push({ id: 'single', name: '(참가자 미등록)', certifiedDays: certifiedDays, totalDays: totalDays, totalPages: totalPages, pct: pct });
-        } catch (e) {}
+        } else {
+          Object.keys(daily).forEach(function (key) {
+            var p = getDayPages(daily, key);
+            totalPages += p;
+            if (p >= goalPages) certifiedDays++;
+          });
+        }
+        var pct = totalDays > 0 ? Math.min(100, Math.round((certifiedDays / totalDays) * 100)) : 0;
+        result.push({ id: 'single', name: '(참가자 미등록)', certifiedDays: certifiedDays, totalDays: totalDays, totalPages: totalPages, pct: pct });
       }
       return { list: result, totalDays: totalDays };
     }
 
-    function renderProgress() {
-      var info = getAllProgress();
+    async function renderProgress() {
+      var info = await getAllProgress();
       var list = info.list;
       var totalDays = info.totalDays;
       var emptyEl = document.getElementById('adminProgressEmpty');
@@ -603,8 +559,8 @@
       });
     }
 
-    function renderNoticeList() {
-      var notices = getNotices();
+    async function renderNoticeList() {
+      var notices = await getNotices();
       var ul = document.getElementById('noticeListAdmin');
       ul.innerHTML = '';
       if (notices.length === 0) {
@@ -621,13 +577,13 @@
       });
     }
 
-    function showAdmin() {
+    async function showAdmin() {
       document.getElementById('loginSection').classList.add('hidden');
       document.getElementById('adminContent').classList.remove('hidden');
-      loadConfigForm();
-      renderUserList();
-      renderProgress();
-      renderNoticeList();
+      await loadConfigForm();
+      await renderUserList();
+      await renderProgress();
+      await renderNoticeList();
     }
 
     function showLogin() {
@@ -637,15 +593,15 @@
       document.getElementById('adminPassword').value = '';
     }
 
-    function loadConfigForm() {
-      const c = getConfig();
+    async function loadConfigForm() {
+      const c = await getConfig();
       document.getElementById('configStartDate').value = c.startDate || '';
       document.getElementById('configTotalDays').value = c.totalDays ?? 66;
       document.getElementById('configGoalPages').value = c.goalPages ?? 20;
     }
 
-    function renderUserList() {
-      const users = getUsers();
+    async function renderUserList() {
+      const users = await getUsers();
       const ul = document.getElementById('userList');
       ul.innerHTML = '';
       if (users.length === 0) {
@@ -695,7 +651,7 @@
 
     document.getElementById('btnLogout').addEventListener('click', showLogin);
 
-    document.getElementById('btnSaveConfig').addEventListener('click', function () {
+    document.getElementById('btnSaveConfig').addEventListener('click', async function () {
       const startDate = document.getElementById('configStartDate').value;
       const totalDays = parseInt(document.getElementById('configTotalDays').value, 10);
       const goalPages = parseInt(document.getElementById('configGoalPages').value, 10);
@@ -711,75 +667,77 @@
         alert('일일 목표 페이지를 1 이상으로 입력해 주세요.');
         return;
       }
-      saveConfig({ startDate, totalDays, goalPages });
-      renderProgress();
+      await saveConfig({ startDate, totalDays, goalPages });
+      await renderProgress();
       alert('설정이 저장되었습니다.');
     });
 
-    document.getElementById('btnAddUser').addEventListener('click', function () {
+    document.getElementById('btnAddUser').addEventListener('click', async function () {
       const name = document.getElementById('newUserName').value.trim();
       if (!name) {
         alert('이름을 입력해 주세요.');
         return;
       }
       const password = (document.getElementById('newUserPassword').value || '').trim();
-      const users = getUsers();
-      const id = 'u' + Date.now();
-      users.push({ id, name, createdAt: new Date().toISOString().slice(0, 10), password: password });
-      saveUsers(users);
+      try {
+        await window.db.addParticipant(name, password);
+      } catch (err) {
+        alert(err.message || '참가자 추가에 실패했습니다.');
+        return;
+      }
       document.getElementById('newUserName').value = '';
       document.getElementById('newUserPassword').value = '';
-      renderUserList();
-      renderProgress();
+      await renderUserList();
+      await renderProgress();
     });
 
     document.getElementById('newUserName').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') document.getElementById('btnAddUser').click();
     });
 
-    document.getElementById('userList').addEventListener('click', function (e) {
+    document.getElementById('userList').addEventListener('click', async function (e) {
       const btn = e.target.closest('.btn-delete-user');
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       if (!confirm('이 사용자를 삭제할까요? 해당 사용자의 독서 기록도 함께 삭제됩니다.')) return;
-      let users = getUsers().filter(u => u.id !== id);
-      saveUsers(users);
-      const dataKey = 'reading66_data';
       try {
-        const raw = localStorage.getItem(dataKey);
-        if (raw) {
-          const data = JSON.parse(raw);
-          delete data[id];
-          localStorage.setItem(dataKey, JSON.stringify(data));
-        }
-      } catch (err) {}
-      const current = localStorage.getItem('reading66_currentUser');
-      if (current === id) localStorage.removeItem('reading66_currentUser');
-      renderUserList();
-      renderProgress();
+        await window.db.deleteParticipant(id);
+      } catch (err) {
+        alert(err.message || '삭제에 실패했습니다.');
+        return;
+      }
+      await renderUserList();
+      await renderProgress();
     });
 
-    document.getElementById('btnAddNotice').addEventListener('click', function () {
+    document.getElementById('btnAddNotice').addEventListener('click', async function () {
       var ta = document.getElementById('newNoticeText');
       var text = ta.value.trim();
       if (!text) {
         alert('공지 내용을 입력해 주세요.');
         return;
       }
-      var notices = getNotices();
-      notices.unshift({ id: 'n' + Date.now(), createdAt: new Date().toISOString().slice(0, 10), text: text });
-      saveNotices(notices);
+      try {
+        await window.db.addNotice(text);
+      } catch (err) {
+        alert(err.message || '공지 등록에 실패했습니다.');
+        return;
+      }
       ta.value = '';
-      renderNoticeList();
+      await renderNoticeList();
     });
 
-    document.getElementById('noticeListAdmin').addEventListener('click', function (e) {
+    document.getElementById('noticeListAdmin').addEventListener('click', async function (e) {
       var btn = e.target.closest('.btn-delete-notice');
       if (!btn) return;
       var id = btn.getAttribute('data-id');
-      var notices = getNotices().filter(function (n) { return n.id !== id; });
-      saveNotices(notices);
-      renderNoticeList();
+      try {
+        await window.db.deleteNotice(id);
+      } catch (err) {
+        alert(err.message || '삭제에 실패했습니다.');
+        return;
+      }
+      await renderNoticeList();
     });
 
     if (isLoggedIn()) showAdmin();
