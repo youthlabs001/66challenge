@@ -334,6 +334,29 @@
       line-height: 1.4;
     }
 
+    .record-item-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-edit {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-edit:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     .record-empty {
       color: var(--text-muted);
       font-size: 0.9rem;
@@ -679,6 +702,12 @@
       return y + '.' + m + '.' + d;
     }
 
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
     function getDayEntry(daily, key) {
       var v = daily[key];
       if (v == null) return { pages: 0, bookTitle: '', thought: '' };
@@ -773,7 +802,8 @@
           li.className = 'record-item';
           li.innerHTML = '<div class="record-item-head"><span class="record-date">' + formatDateKey(k) + '</span><span class="record-pages">' + entry.pages + '페이지</span><span class="record-badge ' + (certified ? 'certified' : 'partial') + '">' + (certified ? '인증' : '미인증') + '</span></div>' +
             (safeTitle ? '<div class="record-book">' + safeTitle + '</div>' : '') +
-            (safeThought ? '<div class="record-thought">' + safeThought + '</div>' : '');
+            (safeThought ? '<div class="record-thought">' + safeThought + '</div>' : '') +
+            '<div class="record-item-actions"><button type="button" class="btn-edit" data-date="' + escapeHtml(k) + '">수정</button></div>';
           recordList.appendChild(li);
         });
       }
@@ -993,6 +1023,39 @@
       document.getElementById('todayBookTitle').value = '';
       document.getElementById('todayThought').value = '';
       await render();
+    });
+
+    document.getElementById('recordList').addEventListener('click', async function (e) {
+      var btn = e.target.closest('.btn-edit');
+      if (!btn) return;
+      var dateKey = btn.getAttribute('data-date');
+      if (!dateKey) return;
+      var { data } = await loadData();
+      var daily = data.daily || {};
+      var entry = getDayEntry(daily, dateKey);
+      document.getElementById('recordDate').value = dateKey;
+      document.getElementById('todayPages').value = entry.pages > 0 ? entry.pages : '';
+      document.getElementById('todayBookTitle').value = entry.bookTitle || '';
+      document.getElementById('todayThought').value = entry.thought || '';
+      var config = await getConfig();
+      var goalPages = config.goalPages || 20;
+      var pct = Math.min(100, Math.round((entry.pages / goalPages) * 100));
+      var todayBar = document.getElementById('todayBar');
+      todayBar.style.width = pct + '%';
+      todayBar.classList.toggle('success', entry.pages >= goalPages);
+      todayBar.classList.toggle('pending', entry.pages < goalPages);
+      var todayStatus = document.getElementById('todayStatus');
+      if (entry.pages >= goalPages) {
+        todayStatus.textContent = entry.pages + '페이지 기록됨 (목표 달성)';
+        todayStatus.className = 'today-status done';
+      } else if (entry.pages > 0) {
+        todayStatus.textContent = entry.pages + ' / ' + goalPages + '페이지';
+        todayStatus.className = 'today-status ongoing';
+      } else {
+        todayStatus.textContent = '해당 날짜에 기록하세요.';
+        todayStatus.className = 'today-status ongoing';
+      }
+      document.getElementById('recordDate').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     updateView();
