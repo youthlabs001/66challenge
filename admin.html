@@ -40,7 +40,13 @@
       gap: 1rem;
     }
 
-    h1 { font-size: 1.35rem; color: var(--accent); font-weight: 600; }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    h1 { font-size: 1.35rem; color: var(--accent); font-weight: 600; margin: 0; }
 
     .back-link {
       color: var(--text-muted);
@@ -301,7 +307,10 @@
 <body>
   <div class="container">
     <header>
-      <h1>관리자</h1>
+      <div class="header-left">
+        <h1>관리자</h1>
+        <button type="button" class="btn btn-ghost" id="btnLogout" style="display:none">관리자 나가기</button>
+      </div>
       <a class="back-link" href="index.html">← 챌린지 페이지로</a>
     </header>
 
@@ -313,10 +322,6 @@
     </div>
 
     <div id="adminContent" class="hidden">
-      <div class="logout-row" style="margin-bottom:1rem">
-        <button type="button" class="btn btn-ghost" id="btnLogout">관리자 나가기</button>
-      </div>
-
       <div class="admin-layout">
         <!-- 좌측: 전체 진행률 -->
         <div class="admin-column">
@@ -580,6 +585,7 @@
     async function showAdmin() {
       document.getElementById('loginSection').classList.add('hidden');
       document.getElementById('adminContent').classList.remove('hidden');
+      document.getElementById('btnLogout').style.display = '';
       await loadConfigForm();
       await renderUserList();
       await renderProgress();
@@ -590,6 +596,7 @@
       setLoggedIn(false);
       document.getElementById('loginSection').classList.remove('hidden');
       document.getElementById('adminContent').classList.add('hidden');
+      document.getElementById('btnLogout').style.display = 'none';
       document.getElementById('adminPassword').value = '';
     }
 
