@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 · 66일 독서 챌린지</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --accent: #e8b86d;
+      --accent-dim: #c49a4a;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --success: #3fb950;
+      --danger: #f85149;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    h1 { font-size: 1.35rem; color: var(--accent); font-weight: 600; }
+
+    .back-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+
+    /* 로그인 */
+    .login-box {
+      max-width: 320px;
+      margin: 0 auto 2rem;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .login-box input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .btn-primary:hover { background: var(--accent-dim); }
+
+    .btn-ghost { background: transparent; color: var(--text-muted); font-size: 0.85rem; }
+    .btn-ghost:hover { color: var(--danger); }
+
+    .btn-small { padding: 0.5rem 0.85rem; font-size: 0.85rem; }
+
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      margin-bottom: 0.75rem;
+    }
+
+    .form-row label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-group { flex: 1; }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 480px) {
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+
+    .user-list {
+      list-style: none;
+    }
+
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .user-item:last-child { border-bottom: none; }
+
+    .user-name { font-weight: 500; }
+
+    .user-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+    .hidden { display: none !important; }
+
+    .logout-row { margin-top: 1.5rem; text-align: center; }
+
+    /* 전체 진행률 시각화 */
+    .progress-viz-card { text-align: center; }
+    .progress-donut-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 1rem;
+    }
+    .progress-donut-wrap svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+    .progress-donut-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 10;
+    }
+    .progress-donut-fill {
+      fill: none;
+      stroke: var(--success);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.4s ease;
+    }
+    .progress-donut-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .progress-donut-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .progress-donut-label { font-size: 0.7rem; color: var(--text-muted); }
+    .progress-summary {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .progress-summary span strong { color: var(--text); }
+    .user-progress-list { list-style: none; }
+    .user-progress-item {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .user-progress-item:last-child { border-bottom: none; }
+    .user-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .user-progress-name { font-weight: 500; }
+    .user-progress-stat { color: var(--text-muted); font-size: 0.8rem; }
+    .user-progress-bar-wrap {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .user-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+      border-radius: 8px;
+      transition: width 0.4s ease;
+    }
+    .progress-empty-msg { color: var(--text-muted); font-size: 0.9rem; padding: 0.5rem 0; }
+
+    /* 참여율 · 진행률 시각화 */
+    .admin-participation {
+      text-align: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .admin-participation .donut-wrap {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 0.5rem;
+    }
+    .admin-participation .donut-wrap svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .admin-participation .donut-bg { fill: none; stroke: rgba(255, 255, 255, 0.08); stroke-width: 8; }
+    .admin-participation .donut-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.4s ease; }
+    .admin-participation .donut-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; }
+    .admin-participation .donut-val { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+    .admin-participation .donut-lbl { font-size: 0.65rem; color: var(--text-muted); }
+    .admin-participation .participation-text { font-size: 0.8rem; color: var(--text-muted); }
+    .admin-progress-chart-title { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem; }
+    .admin-progress-chart-item {
+      margin-bottom: 0.6rem;
+      font-size: 0.85rem;
+    }
+    .admin-progress-chart-item .row { display: flex; align-items: center; gap: 0.5rem; }
+    .admin-progress-chart-item .name { min-width: 56px; font-weight: 500; }
+    .admin-progress-chart-item .meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.15rem; margin-left: 0; }
+    .admin-progress-chart-item .bar-wrap { flex: 1; height: 14px; background: rgba(255, 255, 255, 0.08); border-radius: 7px; overflow: hidden; }
+    .admin-progress-chart-item .bar { height: 100%; border-radius: 7px; transition: width 0.4s ease; }
+    .admin-progress-chart-item .bar.low { background: linear-gradient(90deg, #8b949e, #6e7681); }
+    .admin-progress-chart-item .bar.mid { background: linear-gradient(90deg, var(--accent-dim), var(--accent)); }
+    .admin-progress-chart-item .bar.high { background: linear-gradient(90deg, #2ea043, var(--success)); }
+    .admin-progress-chart-item .pct { min-width: 36px; text-align: right; color: var(--text-muted); font-weight: 600; }
+
+    /* 3단 레이아웃 */
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 260px;
+      gap: 1.25rem;
+    }
+
+    .admin-column { min-width: 0; }
+
+    @media (max-width: 900px) {
+      .admin-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>관리자</h1>
+      <a class="back-link" href="index.html">← 챌린지 페이지로</a>
+    </header>
+
+    <div id="loginSection" class="login-box card">
+      <div class="card-title">관리자 입장</div>
+      <input type="password" id="adminPassword" placeholder="비밀번호 입력" autocomplete="current-password">
+      <button type="button" class="btn btn-primary" id="btnLogin" style="width:100%">입장</button>
+      <p class="user-meta" style="margin-top:0.75rem">처음 사용 시 비밀번호를 입력하고 입장하면 해당 비밀번호가 설정됩니다.</p>
+    </div>
+
+    <div id="adminContent" class="hidden">
+      <div class="logout-row" style="margin-bottom:1rem">
+        <button type="button" class="btn btn-ghost" id="btnLogout">관리자 나가기</button>
+      </div>
+
+      <div class="admin-layout">
+        <!-- 좌측: 전체 진행률 -->
+        <div class="admin-column">
+          <section class="card">
+            <div class="card-title">참여율 · 진행률</div>
+            <div class="progress-viz-card">
+              <div class="admin-participation">
+                <div class="card-title" style="margin-bottom:0.5rem">참여율</div>
+                <div class="donut-wrap">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="donut-bg" cx="18" cy="18" r="15" />
+                    <circle class="donut-fill" id="adminParticipationDonut" cx="18" cy="18" r="15" stroke-dasharray="0 94.25" />
+                  </svg>
+                  <div class="donut-center">
+                    <div class="donut-val" id="adminParticipationVal">0%</div>
+                    <div class="donut-lbl" id="adminParticipationLbl">참여율</div>
+                  </div>
+                </div>
+                <div class="participation-text" id="adminParticipationText">0명 / 0명 참여</div>
+              </div>
+              <div class="card-title" style="margin-bottom:0.5rem">평균 진행률</div>
+              <div class="progress-donut-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="progress-donut-bg" cx="18" cy="18" r="15" />
+                  <circle class="progress-donut-fill" id="adminDonutFill" cx="18" cy="18" r="15" stroke-dasharray="0 94.25" />
+                </svg>
+                <div class="progress-donut-center">
+                  <div class="progress-donut-value" id="adminDonutValue">0%</div>
+                  <div class="progress-donut-label" id="adminDonutLabel">평균 인증률</div>
+                </div>
+              </div>
+              <div class="progress-summary" id="adminProgressSummary"></div>
+              <div class="admin-progress-chart-title">참가자별 진행률</div>
+              <div id="adminProgressChartList"></div>
+              <p class="progress-empty-msg hidden" id="adminProgressEmpty">참가자를 추가하고 챌린지 기록을 입력하면 진행률이 표시됩니다.</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- 중앙: 챌린지 설정 + 사용자 관리 -->
+        <div class="admin-column">
+          <section class="card">
+            <div class="card-title">챌린지 기간 설정</div>
+            <div class="settings-grid">
+              <div class="form-group">
+                <label>시작일</label>
+                <input type="date" id="configStartDate">
+              </div>
+              <div class="form-group">
+                <label>챌린지 일수</label>
+                <input type="number" id="configTotalDays" min="1" max="365" placeholder="66">
+              </div>
+            </div>
+            <div class="form-row" style="margin-top:1rem">
+              <div class="form-group">
+                <label>일일 목표 페이지</label>
+                <input type="number" id="configGoalPages" min="1" placeholder="20">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="btnSaveConfig" style="margin-top:1rem">설정 저장</button>
+          </section>
+          <section class="card">
+            <div class="card-title">사용자 관리</div>
+            <p class="user-meta" style="margin-bottom:0.75rem">참가자별 로그인 비밀번호를 설정합니다. 비밀번호는 공백 가능.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="newUserName" placeholder="참가자 이름">
+              </div>
+              <div class="form-group">
+                <label>비밀번호</label>
+                <input type="password" id="newUserPassword" placeholder="로그인 비밀번호">
+              </div>
+              <button type="button" class="btn btn-primary" id="btnAddUser">추가</button>
+            </div>
+            <ul class="user-list" id="userList"></ul>
+          </section>
+        </div>
+
+        <!-- 우측: 공지사항 관리 -->
+        <div class="admin-column">
+          <section class="card">
+            <div class="card-title">공지사항 관리</div>
+            <p class="user-meta" style="margin-bottom:0.75rem">챌린지 페이지 우측에 표시됩니다.</p>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>공지 내용</label>
+                <textarea id="newNoticeText" rows="2" placeholder="공지사항 입력" style="width:100%;padding:0.65rem 0.85rem;border:1px solid rgba(255,255,255,0.12);border-radius:8px;background:rgba(0,0,0,0.3);color:var(--text);font-size:0.95rem;font-family:inherit;resize:vertical"></textarea>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="btnAddNotice" style="margin-bottom:1rem">공지 등록</button>
+            <ul class="user-list" id="noticeListAdmin"></ul>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG_KEY = 'reading66_config';
+    const USERS_KEY = 'reading66_users';
+    const NOTICES_KEY = 'reading66_notices';
+    const DATA_KEY = 'reading66_data';
+    const STORAGE_KEY = 'reading66';
+    const ADMIN_PASSWORD_KEY = 'reading66_admin_password';
+
+    function getConfig() {
+      try {
+        const raw = localStorage.getItem(CONFIG_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return {
+        startDate: new Date().toISOString().slice(0, 10),
+        totalDays: 66,
+        goalPages: 20
+      };
+    }
+
+    function saveConfig(config) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
+
+    function getUsers() {
+      try {
+        const raw = localStorage.getItem(USERS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function getNotices() {
+      try {
+        var raw = localStorage.getItem(NOTICES_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+
+    function saveNotices(notices) {
+      localStorage.setItem(NOTICES_KEY, JSON.stringify(notices));
+    }
+
+    function getStoredPassword() {
+      return localStorage.getItem(ADMIN_PASSWORD_KEY) || '';
+    }
+
+    function setStoredPassword(pw) {
+      if (pw) localStorage.setItem(ADMIN_PASSWORD_KEY, pw);
+      else localStorage.removeItem(ADMIN_PASSWORD_KEY);
+    }
+
+    function isLoggedIn() {
+      return sessionStorage.getItem('reading66_admin_logged') === '1';
+    }
+
+    function setLoggedIn(ok) {
+      if (ok) sessionStorage.setItem('reading66_admin_logged', '1');
+      else sessionStorage.removeItem('reading66_admin_logged');
+    }
+
+    function getDayPages(daily, key) {
+      var v = daily[key];
+      if (v == null) return 0;
+      if (typeof v === 'number') return v;
+      return typeof v.pages === 'number' ? v.pages : (parseInt(v.pages, 10) || 0);
+    }
+
+    function getAllProgress() {
+      var config = getConfig();
+      var totalDays = config.totalDays || 66;
+      var goalPages = config.goalPages || 20;
+      var startDate = config.startDate ? new Date(config.startDate + 'T00:00:00') : null;
+      var users = getUsers();
+      var result = [];
+      var allData = {};
+      try {
+        var raw = localStorage.getItem(DATA_KEY);
+        if (raw) allData = JSON.parse(raw);
+      } catch (e) {}
+      if (users.length > 0) {
+        users.forEach(function (u) {
+          var data = allData[u.id] || { daily: {} };
+          var daily = data.daily || {};
+          var certifiedDays = 0;
+          var totalPages = 0;
+          if (startDate) {
+            for (var i = 0; i < totalDays; i++) {
+              var d = new Date(startDate);
+              d.setDate(d.getDate() + i);
+              var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+              var pages = getDayPages(daily, dateKey);
+              totalPages += pages;
+              if (pages >= goalPages) certifiedDays++;
+            }
+          } else {
+            Object.keys(daily).forEach(function (k) {
+              var p = getDayPages(daily, k);
+              totalPages += p;
+              if (p >= goalPages) certifiedDays++;
+            });
+          }
+          var pct = totalDays > 0 ? Math.min(100, Math.round((certifiedDays / totalDays) * 100)) : 0;
+          result.push({ id: u.id, name: u.name, certifiedDays: certifiedDays, totalDays: totalDays, totalPages: totalPages, pct: pct });
+        });
+      } else {
+        try {
+          var singleRaw = localStorage.getItem(STORAGE_KEY);
+          var single = singleRaw ? JSON.parse(singleRaw) : { daily: {} };
+          var daily = single.daily || {};
+          var certifiedDays = 0;
+          var totalPages = 0;
+          if (startDate) {
+            for (var i = 0; i < totalDays; i++) {
+              var d = new Date(startDate);
+              d.setDate(d.getDate() + i);
+              var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+              var pages = getDayPages(daily, dateKey);
+              totalPages += pages;
+              if (pages >= goalPages) certifiedDays++;
+            }
+          } else {
+            Object.keys(daily).forEach(function (k) {
+              var p = getDayPages(daily, k);
+              totalPages += p;
+              if (p >= goalPages) certifiedDays++;
+            });
+          }
+          var pct = totalDays > 0 ? Math.min(100, Math.round((certifiedDays / totalDays) * 100)) : 0;
+          result.push({ id: 'single', name: '(참가자 미등록)', certifiedDays: certifiedDays, totalDays: totalDays, totalPages: totalPages, pct: pct });
+        } catch (e) {}
+      }
+      return { list: result, totalDays: totalDays };
+    }
+
+    function renderProgress() {
+      var info = getAllProgress();
+      var list = info.list;
+      var totalDays = info.totalDays;
+      var emptyEl = document.getElementById('adminProgressEmpty');
+      var summaryEl = document.getElementById('adminProgressSummary');
+      var chartEl = document.getElementById('adminProgressChartList');
+      var circumference = 2 * Math.PI * 15;
+
+      if (list.length === 0) {
+        emptyEl.classList.remove('hidden');
+        summaryEl.innerHTML = '';
+        chartEl.innerHTML = '';
+        document.getElementById('adminDonutValue').textContent = '0%';
+        document.getElementById('adminDonutLabel').textContent = '평균 인증률';
+        document.getElementById('adminDonutFill').setAttribute('stroke-dasharray', '0 94.25');
+        document.getElementById('adminParticipationVal').textContent = '0%';
+        document.getElementById('adminParticipationLbl').textContent = '참여율';
+        document.getElementById('adminParticipationDonut').setAttribute('stroke-dasharray', '0 94.25');
+        document.getElementById('adminParticipationText').textContent = '0명 / 0명 참여';
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      var participationCount = list.filter(function (u) { return u.totalPages > 0; }).length;
+      var participationPct = list.length ? Math.round((participationCount / list.length) * 100) : 0;
+      var partDonutOffset = (participationPct / 100) * circumference;
+      document.getElementById('adminParticipationDonut').setAttribute('stroke-dasharray', partDonutOffset + ' ' + circumference);
+      document.getElementById('adminParticipationVal').textContent = participationPct + '%';
+      document.getElementById('adminParticipationLbl').textContent = '참여율';
+      document.getElementById('adminParticipationText').textContent = participationCount + '명 / ' + list.length + '명 참여';
+
+      var avgPct = Math.round(list.reduce(function (sum, u) { return sum + u.pct; }, 0) / list.length);
+      var totalCertified = list.reduce(function (sum, u) { return sum + u.certifiedDays; }, 0);
+      var totalPages = list.reduce(function (sum, u) { return sum + u.totalPages; }, 0);
+      var donutOffset = (avgPct / 100) * circumference;
+      document.getElementById('adminDonutValue').textContent = avgPct + '%';
+      document.getElementById('adminDonutLabel').textContent = '평균 인증률';
+      document.getElementById('adminDonutFill').setAttribute('stroke-dasharray', donutOffset + ' ' + circumference);
+      summaryEl.innerHTML = '<span>참가자 <strong>' + list.length + '</strong>명</span><span>전체 인증 <strong>' + totalCertified + '</strong>일</span><span>총 페이지 <strong>' + totalPages + '</strong></span>';
+
+      chartEl.innerHTML = '';
+      list.forEach(function (u) {
+        var barClass = u.pct >= 100 ? 'high' : (u.pct >= 50 ? 'mid' : 'low');
+        var div = document.createElement('div');
+        div.className = 'admin-progress-chart-item';
+        div.innerHTML = '<div class="row"><span class="name">' + escapeHtml(u.name) + '</span><div class="bar-wrap"><div class="bar ' + barClass + '" style="width:' + Math.min(100, u.pct) + '%"></div></div><span class="pct">' + u.pct + '%</span></div><div class="meta">' + u.certifiedDays + '일 인증 · ' + u.totalPages + '페이지</div>';
+        chartEl.appendChild(div);
+      });
+    }
+
+    function renderNoticeList() {
+      var notices = getNotices();
+      var ul = document.getElementById('noticeListAdmin');
+      ul.innerHTML = '';
+      if (notices.length === 0) {
+        ul.innerHTML = '<li class="user-item" style="color:var(--text-muted);">등록된 공지가 없습니다.</li>';
+        return;
+      }
+      notices.forEach(function (n) {
+        var li = document.createElement('li');
+        li.className = 'user-item';
+        var text = (n.text || n.content || '').slice(0, 50);
+        if ((n.text || n.content || '').length > 50) text += '…';
+        li.innerHTML = '<div><span class="user-name">' + escapeHtml(text) + '</span><div class="user-meta">' + (n.createdAt ? n.createdAt.slice(0, 10) : '') + '</div></div><button type="button" class="btn btn-ghost btn-small btn-delete-notice" data-id="' + escapeHtml(n.id) + '">삭제</button>';
+        ul.appendChild(li);
+      });
+    }
+
+    function showAdmin() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('adminContent').classList.remove('hidden');
+      loadConfigForm();
+      renderUserList();
+      renderProgress();
+      renderNoticeList();
+    }
+
+    function showLogin() {
+      setLoggedIn(false);
+      document.getElementById('loginSection').classList.remove('hidden');
+      document.getElementById('adminContent').classList.add('hidden');
+      document.getElementById('adminPassword').value = '';
+    }
+
+    function loadConfigForm() {
+      const c = getConfig();
+      document.getElementById('configStartDate').value = c.startDate || '';
+      document.getElementById('configTotalDays').value = c.totalDays ?? 66;
+      document.getElementById('configGoalPages').value = c.goalPages ?? 20;
+    }
+
+    function renderUserList() {
+      const users = getUsers();
+      const ul = document.getElementById('userList');
+      ul.innerHTML = '';
+      if (users.length === 0) {
+        ul.innerHTML = '<li class="user-item" style="color:var(--text-muted);">등록된 사용자가 없습니다. 위에서 추가해 주세요.</li>';
+        return;
+      }
+      users.forEach(u => {
+        const li = document.createElement('li');
+        li.className = 'user-item';
+        const pwdNote = (u.password !== undefined && u.password !== '') ? ' · 비밀번호 설정됨' : '';
+        li.innerHTML = '<div><span class="user-name">' + escapeHtml(u.name) + '</span><div class="user-meta">ID: ' + escapeHtml(u.id) + pwdNote + '</div></div>' +
+          '<button type="button" class="btn btn-ghost btn-small btn-delete-user" data-id="' + escapeHtml(u.id) + '">삭제</button>';
+        ul.appendChild(li);
+      });
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    document.getElementById('btnLogin').addEventListener('click', function () {
+      const pw = document.getElementById('adminPassword').value.trim();
+      const stored = getStoredPassword();
+      if (!stored) {
+        if (!pw) {
+          alert('비밀번호를 입력해 주세요.');
+          return;
+        }
+        setStoredPassword(pw);
+        setLoggedIn(true);
+        showAdmin();
+        return;
+      }
+      if (pw !== stored) {
+        alert('비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      setLoggedIn(true);
+      showAdmin();
+    });
+
+    document.getElementById('adminPassword').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('btnLogin').click();
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', showLogin);
+
+    document.getElementById('btnSaveConfig').addEventListener('click', function () {
+      const startDate = document.getElementById('configStartDate').value;
+      const totalDays = parseInt(document.getElementById('configTotalDays').value, 10);
+      const goalPages = parseInt(document.getElementById('configGoalPages').value, 10);
+      if (!startDate) {
+        alert('시작일을 선택해 주세요.');
+        return;
+      }
+      if (isNaN(totalDays) || totalDays < 1) {
+        alert('챌린지 일수를 1 이상으로 입력해 주세요.');
+        return;
+      }
+      if (isNaN(goalPages) || goalPages < 1) {
+        alert('일일 목표 페이지를 1 이상으로 입력해 주세요.');
+        return;
+      }
+      saveConfig({ startDate, totalDays, goalPages });
+      renderProgress();
+      alert('설정이 저장되었습니다.');
+    });
+
+    document.getElementById('btnAddUser').addEventListener('click', function () {
+      const name = document.getElementById('newUserName').value.trim();
+      if (!name) {
+        alert('이름을 입력해 주세요.');
+        return;
+      }
+      const password = (document.getElementById('newUserPassword').value || '').trim();
+      const users = getUsers();
+      const id = 'u' + Date.now();
+      users.push({ id, name, createdAt: new Date().toISOString().slice(0, 10), password: password });
+      saveUsers(users);
+      document.getElementById('newUserName').value = '';
+      document.getElementById('newUserPassword').value = '';
+      renderUserList();
+      renderProgress();
+    });
+
+    document.getElementById('newUserName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('btnAddUser').click();
+    });
+
+    document.getElementById('userList').addEventListener('click', function (e) {
+      const btn = e.target.closest('.btn-delete-user');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (!confirm('이 사용자를 삭제할까요? 해당 사용자의 독서 기록도 함께 삭제됩니다.')) return;
+      let users = getUsers().filter(u => u.id !== id);
+      saveUsers(users);
+      const dataKey = 'reading66_data';
+      try {
+        const raw = localStorage.getItem(dataKey);
+        if (raw) {
+          const data = JSON.parse(raw);
+          delete data[id];
+          localStorage.setItem(dataKey, JSON.stringify(data));
+        }
+      } catch (err) {}
+      const current = localStorage.getItem('reading66_currentUser');
+      if (current === id) localStorage.removeItem('reading66_currentUser');
+      renderUserList();
+      renderProgress();
+    });
+
+    document.getElementById('btnAddNotice').addEventListener('click', function () {
+      var ta = document.getElementById('newNoticeText');
+      var text = ta.value.trim();
+      if (!text) {
+        alert('공지 내용을 입력해 주세요.');
+        return;
+      }
+      var notices = getNotices();
+      notices.unshift({ id: 'n' + Date.now(), createdAt: new Date().toISOString().slice(0, 10), text: text });
+      saveNotices(notices);
+      ta.value = '';
+      renderNoticeList();
+    });
+
+    document.getElementById('noticeListAdmin').addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-delete-notice');
+      if (!btn) return;
+      var id = btn.getAttribute('data-id');
+      var notices = getNotices().filter(function (n) { return n.id !== id; });
+      saveNotices(notices);
+      renderNoticeList();
+    });
+
+    if (isLoggedIn()) showAdmin();
+  </script>
+</body>
+</html>
