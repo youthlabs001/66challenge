@@ -66,6 +66,15 @@
       color: var(--accent);
     }
 
+    .my-info-head .btn-logout {
+      flex-shrink: 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .my-info-head .btn-logout:hover {
+      color: var(--accent);
+    }
+
     .layout-three {
       display: grid;
       grid-template-columns: 280px 1fr 260px;
@@ -102,11 +111,17 @@
     }
 
     /* 좌측: 내 정보 */
+    .my-info-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
     .my-info-name {
       font-size: 1.1rem;
       font-weight: 600;
       color: var(--accent);
-      margin-bottom: 0.5rem;
     }
 
     .user-select-wrap {
@@ -498,9 +513,6 @@
 <body>
   <header class="page-header">
     <h1>66일 독서 챌린지</h1>
-    <p class="header-action" id="headerLogoutWrap">
-      <button type="button" class="btn-logout" id="btnLogout">로그아웃</button>
-    </p>
   </header>
 
   <div id="loginFormSection" class="login-form-wrap hidden">
@@ -526,7 +538,10 @@
           <label for="userSelect">참가자</label>
           <select id="userSelect"></select>
         </div>
-        <div class="my-info-name" id="myInfoName">나</div>
+        <div class="my-info-head">
+          <span class="my-info-name" id="myInfoName">나</span>
+          <button type="button" class="btn-logout" id="btnLogout">로그아웃</button>
+        </div>
         <div class="my-info-stats">
           <div class="my-info-stat">
             <div class="val" id="myInfoCertDays">0</div>
@@ -847,13 +862,11 @@
       }
       document.getElementById('loginFormSection').classList.remove('hidden');
       document.getElementById('mainContent').classList.add('hidden');
-      document.getElementById('headerLogoutWrap').classList.add('hidden');
     }
 
     function showMainContent() {
       document.getElementById('loginFormSection').classList.add('hidden');
       document.getElementById('mainContent').classList.remove('hidden');
-      document.getElementById('headerLogoutWrap').classList.remove('hidden');
     }
 
     async function updateView() {
